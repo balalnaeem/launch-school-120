@@ -213,8 +213,7 @@ class TTTGame
   def display_board
     puts '~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~'
     puts "You are #{human.marker}. #{computer.name} is #{computer.marker}."
-    puts "Your score is #{human.score}. /
-      #{computer.name}'s score is #{computer.score}."
+    puts "Your score is #{human.score}. #{computer.name}'s score is #{computer.score}."
     puts '~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~'
     board.draw
   end
@@ -251,6 +250,7 @@ class TTTGame
 
   def decide_first_mover
     puts "Who would you like to go first? (h)uman or (c)omputer?"
+    puts ''
     answer = nil
     loop do
       answer = gets.chomp.downcase
