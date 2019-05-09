@@ -210,13 +210,15 @@ class TTTGame
 
   private
 
+  # rubocop:disable Metrics/LineLength
   def display_board
     puts '~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~'
     puts "You are #{human.marker}. #{computer.name} is #{computer.marker}."
-    puts "Your score is #{human.score}. #{computer.name}'s score is #{computer.score}."
+    puts "Your score: #{human.score}. #{computer.name}'s score: #{computer.score}."
     puts '~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~'
     board.draw
   end
+  # rubocop:anable Metrics/LineLength
 
   def clear_screen
     system 'clear'
@@ -285,17 +287,27 @@ class TTTGame
     board[choice] = human.marker
   end
 
+  # rubocop:disable Metrics/AbcSize
   def computer_makes_move
-    if board.win_possible?
-      board[board.winning_square] = computer.marker
-    elsif board.need_defence?
-      board[board.square_in_danger] = computer.marker
-    elsif board.square_5_empty?
-      board[5] = computer.marker
-    else
-      board[board.empty_squares.sample] = computer.marker
-    end
+    square = case board
+             when board.win_possible?   then board.winning_square
+             when board.need_defence?   then board.square_in_danger
+             when board.square_5_empty? then board[5]
+             else board.empty_squares.sample
+             end
+    board[square] = computer.marker
+    # square = if board.win_possible?
+    #            board.winning_square
+    #          elsif board.need_defence?
+    #            board.square_in_danger
+    #          elsif board.square_5_empty?
+    #            board[5]
+    #          else
+    #            board.empty_squares.sample
+    #          end
+    # board[square] = computer.marker
   end
+  # rubocop:enable Metrics/AbcSize
 
   def display_result
     clear_screen_and_display_board
