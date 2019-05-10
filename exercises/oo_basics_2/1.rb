@@ -1,20 +1,19 @@
-class Cat
-  attr_accessor :name
+class Person
+  attr_writer :secret
 
-  def initialize(name)
-    @name = name
+  def compare_secret(other_person)
+    secret == other_person.secret
   end
 
-  def rename(new_name)
-    @name = new_name
-  end
+  protected
 
-  def identity
-    self
-  end
+  attr_reader :secret
 end
 
-kitty = Cat.new('Sophie')
-p kitty
+person1 = Person.new
+person1.secret = 'Shh.. this is a secret!'
 
-#####
+person2 = Person.new
+person2.secret = 'Shh.. this is a different secret!'
+
+puts person1.compare_secret(person2)
