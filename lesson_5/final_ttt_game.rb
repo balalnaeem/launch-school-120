@@ -1,5 +1,6 @@
 class Board
   INITIAL_MARKER = " "
+  BEST_INITIAL_SQUARE = 5
   WINNING_LINES = [
     [1, 2, 3], [4, 5, 6], [7, 8, 9], # rows
     [1, 4, 7], [2, 5, 8], [3, 6, 9], # columns
@@ -154,8 +155,8 @@ class Human < Player
     name_choice = ''
     loop do
       name_choice = gets.chomp
-      break unless name_choice.empty?
-      puts 'Sorry! You must enter at least one character. Try again.'
+      break if name_choice =~ /[a-z]/i
+      puts 'Sorry! You must enter alphabet character(s). Try again.'
     end
     @name = name_choice
   end
@@ -166,7 +167,7 @@ class Human < Player
     marker_choice = nil
     loop do
       marker_choice = gets.chomp.upcase
-      break if marker_choice != 'O' && ('A'..'Z').cover?(marker_choice)
+      break if marker_choice != 'O' && ('A'..'Z').to_a.include?(marker_choice)
       puts 'Sorry. Invalid entry. Must enter an alphabet character.'
     end
     @marker = marker_choice
@@ -200,10 +201,9 @@ class TTTGame
         break if board.someone_won? || board.full?
         clear_screen_and_display_board
       end
-      adjust_scores
-      display_result
-      announce_grand_winner
+      game_end_protocol
       break unless play_again?
+      reset_board_and_scores
     end
     display_goodbye_message
   end
@@ -221,7 +221,7 @@ class TTTGame
   # rubocop:anable Metrics/LineLength
 
   def clear_screen
-    system 'clear'
+    system('clear') || system('cls')
   end
 
   def clear_screen_and_display_board
@@ -280,34 +280,25 @@ class TTTGame
     puts "Pick a square from #{joinor(board.empty_squares)}"
     choice = nil
     loop do
-      choice = gets.chomp.to_i
-      break if board.empty_squares.include? choice
+      choice = gets.chomp
+      break if valid_str_integer?(choice) && board.empty_squares.include?(choice.to_i)
       puts "Sorry! Must enter valid input. Try again!"
     end
-    board[choice] = human.marker
+    board[choice.to_i] = human.marker
   end
 
-  # rubocop:disable Metrics/AbcSize
   def computer_makes_move
-    square = case board
-             when board.win_possible?   then board.winning_square
-             when board.need_defence?   then board.square_in_danger
-             when board.square_5_empty? then board[5]
-             else board.empty_squares.sample
+    square = if board.win_possible?
+               board.winning_square
+             elsif board.need_defence?
+               board.square_in_danger
+             elsif board.square_5_empty?
+               Board::BEST_INITIAL_SQUARE
+             else
+               board.empty_squares.sample
              end
     board[square] = computer.marker
-    # square = if board.win_possible?
-    #            board.winning_square
-    #          elsif board.need_defence?
-    #            board.square_in_danger
-    #          elsif board.square_5_empty?
-    #            board[5]
-    #          else
-    #            board.empty_squares.sample
-    #          end
-    # board[square] = computer.marker
   end
-  # rubocop:enable Metrics/AbcSize
 
   def display_result
     clear_screen_and_display_board
@@ -330,10 +321,8 @@ class TTTGame
   def announce_grand_winner
     if human.grand_winner?
       puts "#{human.name} is the grand winner this time!"
-      reset_both_scores
     elsif computer.grand_winner?
       puts "#{computer.name} is the grand winner this time!"
-      reset_both_scores
     end
   end
 
@@ -355,9 +344,7 @@ class TTTGame
       break if %w(y n).include? answer
       puts "Sorry. Must enter y or n. Try again."
     end
-    return false if answer == 'n'
-    reset
-    true
+    answer == 'y'
   end
 
   def ready_to_play
@@ -367,6 +354,21 @@ class TTTGame
     human.choose_marker
     @first_mover = decide_first_mover
     @current_player = @first_mover
+  end
+
+  def game_end_protocol
+    adjust_scores
+    display_result
+    announce_grand_winner
+  end
+
+  def valid_str_integer?(str)
+    str.to_i.to_s == str
+  end
+
+  def reset_board_and_scores
+    reset
+    reset_both_scores if human.grand_winner? || computer.grand_winner?
   end
 end
 
