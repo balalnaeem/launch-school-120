@@ -257,6 +257,7 @@ class Game
     loop do
       answer = gets.chomp.downcase
       break if ['y', 'n'].include? answer
+      puts "Sorry, invalid answer! Please enter y or n."
     end
     answer == 'y'
   end
