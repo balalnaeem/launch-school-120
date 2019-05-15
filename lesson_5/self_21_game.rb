@@ -1,11 +1,50 @@
-class Participant
-  attr_reader :hand, :name
-
-  def initialize
-    @hand = []
+module Displayable
+  def display_welcome_message
+    clear
+    puts "Welcome to 21, #{player.name}!"
+    puts ''
+    puts "You will be playing against #{dealer.name} today!"
   end
 
-  def show_hand
+  def display_goodbye_message
+    puts "Thank you for playing! Goodbye!"
+  end
+
+  def clear
+    system('clear') || system('cls')
+  end
+
+  def display_busted_message
+    if player.busted?
+      puts "Looks like you are busted! #{dealer.name} is the winner!"
+    elsif dealer.busted?
+      dealer.display_hand
+      puts "Looks like #{dealer.name} is busted! You are the winner!"
+    end
+  end
+
+  def display_initial_cards
+    player.display_hand
+    dealer.display_initial_hand
+  end
+
+  def display_final_hands
+    player.display_hand
+    dealer.display_hand
+  end
+
+  def display_game_result
+    result = if player.total > dealer.total
+               "Looks like you are the winner, #{player.name}!"
+             elsif dealer.total > player.total
+               "Looks like #{dealer.name} is the winner!"
+             else
+               "It's a tie!"
+             end
+    puts result
+  end
+
+  def display_hand
     puts ''
     puts "******** #{name}'s Hand ********"
     hand.each_with_index do |card, idx|
@@ -15,9 +54,25 @@ class Participant
     puts ''
   end
 
-  def values
-    hand.map(&:value)
+  def display_initial_hand
+    puts "******** #{name}'s Hand ********"
+    hand.each_with_index do |card, idx|
+      if idx == 0
+        puts "#{idx + 1} : The #{card.value} of #{card.suit}"
+      else
+        puts "#{idx + 1}: Unknown"
+      end
+    end
+    puts ''
   end
+
+  def display_black_jack_win
+    puts "WOW! You hit a Black Jack. You won!"
+  end
+end
+
+module Hand
+  BLACK_JACK = 21
 
   def total
     total_val = 0
@@ -32,9 +87,36 @@ class Participant
       total_val += card_value
     end
     values.count('Ace').times do
-      total_val -= 10 if total_val > 21
+      total_val -= 10 if total_val > BLACK_JACK
     end
     total_val
+  end
+
+  def busted?
+    total > 21
+  end
+
+  def reset_hand
+    @hand = []
+  end
+
+  def values
+    hand.map(&:value)
+  end
+
+  def blackjack?
+    total == BLACK_JACK
+  end
+end
+
+class Participant
+  include Hand
+  include Displayable
+
+  attr_reader :hand, :name
+
+  def initialize
+    @hand = []
   end
 
   def hit_or_stay
@@ -51,14 +133,6 @@ class Participant
   def chose_hit?
     hit_or_stay == 'h'
   end
-
-  def busted?
-    total > 21
-  end
-
-  def reset_hand
-    @hand = []
-  end
 end
 
 class Player < Participant
@@ -66,6 +140,8 @@ class Player < Participant
     @name = choose_name
     super
   end
+
+  private
 
   def choose_name
     puts "What's your name?"
@@ -85,20 +161,10 @@ class Dealer < Participant
     super
   end
 
+  private
+
   def choose_name
     @name = ['AiGod', 'BotKing', 'TimApple', 'MacNinja', 'DonaldTrump'].sample
-  end
-
-  def show_initial_hand
-    puts "******** #{name}'s Hand ********"
-    hand.each_with_index do |card, idx|
-      if idx == 0
-        puts "#{idx + 1} : The #{card.value} of #{card.suit}"
-      else
-        puts "#{idx + 1}: Unknown"
-      end
-    end
-    puts ''
   end
 end
 
@@ -133,6 +199,8 @@ class Deck
 end
 
 class Game
+  DEALER_MAX_TOTAL = 17
+  include Displayable
   attr_reader :deck, :player, :dealer
 
   def initialize
@@ -141,20 +209,20 @@ class Game
     @dealer = Dealer.new
   end
 
-  def clear
-    system('clear') || system('cls')
+  def start
+    display_welcome_message
+    loop do
+      deal_initial_cards
+      display_initial_cards
+      play
+      break unless play_again?
+      reset_game
+      clear
+    end
+    display_goodbye_message
   end
 
-  def display_welcome_message
-    clear
-    puts "Welcome to 21, #{player.name}!"
-    puts ''
-    puts "You will be playing against #{dealer.name} today!"
-  end
-
-  def display_goodbye_message
-    puts "Thank you for playing 21! Goodbye!"
-  end
+  private
 
   def deal_initial_cards
     2.times do
@@ -171,17 +239,13 @@ class Game
     end
   end
 
-  def show_initial_cards
-    player.show_hand
-    dealer.show_initial_hand
-  end
-
   def player_turn
     loop do
+      break if player.blackjack?
       if player.chose_hit?
         puts "#{player.name} chose to hit..."
         add_card(:player)
-        player.show_hand
+        player.display_hand
       else
         puts "#{player.name} chose to stay..."
         break
@@ -195,7 +259,7 @@ class Game
     puts "#{dealer.name}'s' turn..."
     puts ''
     loop do
-      if dealer.total < 16
+      if dealer.total < DEALER_MAX_TOTAL
         puts "He chose hit..."
         add_card
       else
@@ -206,35 +270,12 @@ class Game
     end
   end
 
-  def display_busted_message
-    if player.busted?
-      puts "Looks like you are busted! #{dealer.name} is the winner!"
-    elsif dealer.busted?
-      dealer.show_hand
-      puts "Looks like #{dealer.name} is buted! You are the winner!"
-    end
-  end
-
-  def show_final_hands
-    player.show_hand
-    dealer.show_hand
-  end
-
-  def show_final_result
-    show_final_hands
-    result = if player.total > dealer.total
-               "Looks like you are the winner, #{player.name}!"
-             elsif dealer.total > player.total
-               "Looks like #{dealer.name} is the winner!"
-             else
-               "It's a tie!"
-             end
-    puts result
-  end
-
-  def play
+  def hit_loop
     loop do
       player_turn
+      display_black_jack_win if player.blackjack?
+      break if player.blackjack?
+
       if player.busted?
         display_busted_message
         break
@@ -246,7 +287,16 @@ class Game
         break
       end
 
-      show_final_result
+      break
+    end
+  end
+
+  def play
+    loop do
+      hit_loop
+      break if player.blackjack? || player.busted? || dealer.busted?
+      display_final_hands
+      display_game_result
       break
     end
   end
@@ -266,19 +316,6 @@ class Game
     deck.reset
     player.reset_hand
     dealer.reset_hand
-  end
-
-  def start
-    display_welcome_message
-    loop do
-      deal_initial_cards
-      show_initial_cards
-      play
-      break unless play_again?
-      reset_game
-      clear
-    end
-    display_goodbye_message
   end
 end
 
